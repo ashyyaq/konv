@@ -1,0 +1,164 @@
+using Newtonsoft.Json;
+using System.Xml.Serialization;
+
+public class Berry
+{
+    public string Name { get; set; }
+    public string Color { get; set; }
+    public int Quantity { get; set; }
+
+    public Berry(string name, string color, int quantity)
+    {
+        Name = name;
+        Color = color;
+        Quantity = quantity;
+    }
+}
+
+public class FileManager
+{
+    private const string txtExtension = ".txt";
+    private const string jsonExtension = ".json";
+    private const string xmlExtension = ".xml";
+
+    public void SaveToFile(string path, Berry berry)
+    {
+        string extension = Path.GetExtension(path);
+
+        switch (extension)
+        {
+            case txtExtension:
+                SaveToTxtFile(path, berry);
+                break;
+            case jsonExtension:
+                SaveToJsonFile(path, berry);
+                break;
+            case xmlExtension:
+                SaveToXmlFile(path, berry);
+                break;
+            default:
+                throw new Exception("Неподдерживаемый формат файла");
+        }
+    }
+
+    private void SaveToTxtFile(string path, Berry berry)
+    {
+        using (StreamWriter sw = new StreamWriter(path))
+        {
+            sw.WriteLine($"Название: {berry.Name}");
+            sw.WriteLine($"Цвет: {berry.Color}");
+            sw.WriteLine($"Кличество: {berry.Quantity}");
+        }
+    }
+
+    private void SaveToJsonFile(string path, Berry berry)
+    {
+        string json = JsonConvert.SerializeObject(berry, Formatting.Indented);
+        File.WriteAllText(path, json);
+    }
+
+    private void SaveToXmlFile(string path, Berry berry)
+    {
+        XmlSerializer xs = new XmlSerializer(typeof(Berry));
+        using (FileStream fs = new FileStream(path, FileMode.Create))
+        {
+            xs.Serialize(fs, berry);
+        }
+    }
+
+    public Berry LoadFromFile(string path)
+    {
+        string extension = Path.GetExtension(path);
+
+        switch (extension)
+        {
+            case txtExtension:
+                return LoadFromTxtFile(path);
+            case jsonExtension:
+                return LoadFromJsonFile(path);
+            case xmlExtension:
+                return LoadFromXmlFile(path);
+            default:
+                throw new Exception("Неподдерживаемый формат файла");
+        }
+    }
+
+    private Berry LoadFromTxtFile(string path)
+    {
+        string name = null;
+        string color = null;
+        int quantity = 0;
+
+        using (StreamReader sr = new StreamReader(path))
+        {
+            string line;
+            while ((line = sr.ReadLine()) != null)
+            {
+                if (line.StartsWith("Название: "))
+                {
+                    name = line.Substring("Название: ".Length);
+                }
+                else if (line.StartsWith("Цвет: "))
+                {
+                    line.Substring("Цвет: ".Length);
+                }
+                else if (line.StartsWith("Количество: "))
+                {
+                    int.Parse(line.Substring("Количество: ".Length));
+                }
+            }
+        }
+
+        return new Berry(name, color, quantity);
+    }
+
+    private Berry LoadFromJsonFile(string path)
+    {
+        string json = File.ReadAllText(path);
+        Berry berry = JsonConvert.DeserializeObject<Berry>(json);
+        return berry;
+    }
+
+    private Berry LoadFromXmlFile(string path)
+    {
+        XmlSerializer xs = new XmlSerializer(typeof(Berry));
+        using (FileStream fs = new FileStream(path, FileMode.Open))
+        {
+            Berry berry = (Berry)xs.Deserialize(fs);
+            return berry;
+        }
+    }
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.WriteLine("Введите путь к файлу:");
+            string filePath = Console.ReadLine();
+
+            FileManager fileManager = new FileManager();
+            Berry berry = fileManager.LoadFromFile(filePath);
+
+            Console.WriteLine("Загруженные данные:");
+            Console.WriteLine($"Название: {berry.Name}");
+            Console.WriteLine($"Цвет: {berry.Color}");
+            Console.WriteLine($"Количество: {berry.Quantity}");
+
+            ConsoleKeyInfo keyInfo;
+            do
+            {
+                Console.WriteLine("Нажмите F1 для сохранения файла или Escape для выхода");
+
+                keyInfo = Console.ReadKey();
+                if (keyInfo.Key == ConsoleKey.F1)
+                {
+                    Console.WriteLine("\nВведите путь для сохранения файла:");
+                    string savePath = Console.ReadLine();
+                    fileManager.SaveToFile(savePath, berry);
+                    Console.WriteLine("Файл сохранен");
+                }
+            } while (keyInfo.Key != ConsoleKey.Escape);
+
+            Console.WriteLine("Программа завершена");
+        }
+    }
+}
